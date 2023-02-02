@@ -3,7 +3,7 @@ import networkx as nx
 import streamlit as st
 
 # Load the NER model
-nlp = spacy.load("path/to/model")
+nlp = spacy.load("model\ru_core_news_md-3.5.0.tar.gz")
 
 # Function to process the text and extract entities
 def process_text(text):
