@@ -2,35 +2,65 @@ import spacy
 import networkx as nx
 import streamlit as st
 import ru_core_news_md
+import matplotlib as plt
+import re
+import pymorphy2
+import pandas as pd
+
 
 # Load the NER model
 nlp = ru_core_news_md.load()
+morph = pymorphy2.MorphAnalyzer()
 
 # Function to process the text and extract entities
 def process_text(text):
-    characters = {}
+
     doc = nlp(text)
-    for ent in doc.ents:
-        if ent.label_ == "PER":
-            if ent.text not in characters:
-                characters[ent.text] = []
-            for i in range(ent.start, ent.end):
-                for other_ent in doc.ents:
-                    if other_ent.label_ == "PER" and other_ent.start < i < other_ent.end:
-                        if other_ent.text not in characters[ent.text]:
-                            characters[ent.text].append(other_ent.text)
-    return characters
+
+    sent_entity_df = []
+
+    # Loop through sentences, store named entity list for each sentence
+    for sent in doc.sents:
+        entity_list = [morph.parse(re.sub('\n', '', ent.text))[0].normal_form for ent in sent.ents if ent.label_ == 'PER']
+        sent_entity_df.append({"sentence": sent, "entities": entity_list})
+    
+    sent_entity_df = pd.DataFrame(sent_entity_df)
+
+
+    relationships = []
+
+    for i in range(sent_entity_df.index[-1]):
+        end_i = min(i+5, sent_entity_df.index[-1])
+        char_list = sum((sent_entity_df.loc[i: end_i].entities), [])
+        
+        # Remove duplicated characters that are next to each other
+        char_unique = [char_list[i] for i in range(len(char_list)) 
+                    if (i==0) or char_list[i] != char_list[i-1]]
+        
+        if len(char_unique) > 1:
+            for idx, a in enumerate(char_unique[:-1]):
+                b = char_unique[idx + 1]
+                relationships.append({"source": a, "target": b})
+        
+    relationship_df = pd.DataFrame(relationships)
+    relationship_df["value"] = 1
+    relationship_df = relationship_df.groupby(["source","target"], sort=False, as_index=False).sum()
+
+
+    return relationship_df
 
 # Function to visualize the characters
 def visualize_characters(characters):
-    G = nx.Graph()
-    for character, connections in characters.items():
-        G.add_node(character)
-        for connection in connections:
-            G.add_edge(character, connection)
-    pos = nx.spring_layout(G)
-    nx.draw(G, pos, with_labels=True, node_color="skyblue", node_size=1500, alpha=0.7, linewidths=0.5, font_size=10)
-    st.pyplot()
+    G = nx.from_pandas_edgelist(characters, 
+                            source = "source", 
+                            target = "target", 
+                            edge_attr = "value", 
+                            create_using = nx.Graph())
+    plt.figure(figsize=(10,10))
+    pos = nx.kamada_kawai_layout(G)
+    nx.draw(G, with_labels=True, node_color='skyblue', edge_cmap=plt.cm.Blues, pos = pos)
+    plt.show()
+
 
 # Streamlit app
 def app():
@@ -40,7 +70,7 @@ def app():
     # Upload the txt file
     uploaded_file = st.file_uploader("Upload a book in txt format", type=["txt"])
     if uploaded_file is not None:
-        text = uploaded_file.read()
+        text = uploaded_file.read().decode("cp1251")
         characters = process_text(text)
         st.write("Number of characters:", len(characters))
         st.write("Connections between characters:", characters)

@@ -1,4 +1,7 @@
 streamlit
 spacy
 networkx
+matplotlib
 ./ru_core_news_md-3.5.0.tar.gz
+pymorphy2
+Network
