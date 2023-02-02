@@ -40,7 +40,7 @@ def app():
     # Upload the txt file
     uploaded_file = st.file_uploader("Upload a book in txt format", type=["txt"])
     if uploaded_file is not None:
-        text = uploaded_file.read().decode("utf-8")
+        text = uploaded_file.read()
         characters = process_text(text)
         st.write("Number of characters:", len(characters))
         st.write("Connections between characters:", characters)
