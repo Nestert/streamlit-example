@@ -1,9 +1,10 @@
 import spacy
 import networkx as nx
 import streamlit as st
+import ru_core_news_md
 
 # Load the NER model
-nlp = spacy.load(r'model\ru_core_news_md-3.5.0')
+nlp = ru_core_news_md.load()
 
 # Function to process the text and extract entities
 def process_text(text):

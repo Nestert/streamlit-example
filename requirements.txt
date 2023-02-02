@@ -1,3 +1,4 @@
 streamlit
 spacy
 networkx
+./ru_core_news_md-3.5.0.tar.gz
